@@ -39,7 +39,7 @@ int main() {
     char pot1Val, pot2Val;
     
     //specifying address same as transmitter for pipe0 and pipe1
-    long long RxAddress_PIPE0 = 0xC2C2C2C2C2;    
+    long long RxAddress_PIPE0 = 0xC2C2C2C2C2;
     long long RxAddress_PIPE1 = 0xE2E2E2E2E2;
     long long RxAddress_PIPE2 = 0xE2E2E2E2D3;    
     
