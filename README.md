@@ -1,4 +1,4 @@
 # nrf24l01p-master
-master node for  https://github.com/vketch/nRF24L01P
+Master node for  https://github.com/vketch/nRF24L01P on STM32F4
 
-main.cpp__ some old aproach
+main.cpp__ the old approach. Pelase don't use it. 
