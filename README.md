@@ -1,2 +1,2 @@
 # nrf24l01p-master
-master node for nrf24l01p 
+master node for  https://github.com/vketch/nRF24L01P
