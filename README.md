@@ -1,4 +1,4 @@
 # nrf24l01p-master
-Master node for  https://github.com/vketch/nRF24L01P on STM32F4
+Example of using  of  https://github.com/vketch/nRF24L01P on STM32F4
+The one receiver master  that serves  multiple transivers 
 
-main.cpp__ the old approach. Pelase don't use it. 
