@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <stdint.h>
 
-//#define MASTER
-#define SLAVE
+#define MASTER
+//#define SLAVE
 #define SLAVE_ID NRF24L01P_PIPE_P0
 
 #if defined(MASTER) && defined(SLAVE)
@@ -17,15 +17,18 @@
 unsigned long long pipe_addresses[PIPE_NUMBER] = {0xC2C2C2C2C2, 0xE2E2E2E2E2, 0xE2E2E2E2D3};
 
 //nRF24L01P my_nrf24l01p(PA_7, PA_6, PA_5, PD_14, D8, D7);   // SPI1 
-nRF24L01P my_nrf24l01p(D22/*PB_5*/, D25/*PB_4*/, D23/*PB_3*/, D10/*PD_14*/, D8/*PF12*/, D7/*PF13*/); // SPI3
+nRF24L01P my_nrf24l01p(D22/*PB_5*/, D25/*PB_4*/, D23/*PB_3*/, D10/*PD_14*/, D8/*PF12*/, D7 /*PF13*/); // SPI3
 
 
 // Blinking rate in milliseconds
 DigitalOut myled1(LED1);
 DigitalOut myled2(LED2);
 DigitalOut myled3(LED3);
-#define BLINKING_RATE_MS     500ms
+#define BLINKING_RATE_MS     1000ms
 
+
+EventQueue queue(32 * EVENTS_EVENT_SIZE);
+Thread t;
 
 #if defined(MASTER)
 int readOnPipe(int pipe) 
@@ -65,10 +68,38 @@ bool init_master()
     return true;
 }
 
+void read_all_pipes(){
+    for(uint8_t pipe = 0; pipe<PIPE_NUMBER; pipe ++ ){ 
+        
+        int read_bytes = readOnPipe( pipe );
+        if( read_bytes ) // some data is received
+        {
+            // lets blink by the LED depends on which node data is received 
+            if( pipe == NRF24L01P_PIPE_P0 )
+                myled1 = !myled1;
+            else if( pipe == NRF24L01P_PIPE_P1 )
+                myled2 = !myled2;
+            else if ( pipe == NRF24L01P_PIPE_P2 )
+                myled3 = !myled3;
+        }
+    }
+}
+
+void IRQ_fall_handler(void)
+{
+    // /queue.call(printf, "rise_handler in context %p\n", ThisThread::get_id()); 
+    queue.call( read_all_pipes ); 
+    //readOnPipe
+}
+
 #else // SLAVE
 void TransmitData() 
 {
-    char txData[TRANSFER_SIZE] = {SLAVE_ID+5,SLAVE_ID+4, SLAVE_ID+3, SLAVE_ID+2}; // just sore pipe id increased by 5
+    static unsigned int data = 0;
+    //char txData[TRANSFER_SIZE] = {SLAVE_ID+5,SLAVE_ID+4, SLAVE_ID+3, SLAVE_ID+2}; // just sore pipe id increased by 5
+    char txData[TRANSFER_SIZE];
+    memcpy( txData, &data, sizeof(txData) );
+    data++;
     my_nrf24l01p.write( SLAVE_ID, txData, TRANSFER_SIZE );    
 
     printf("Slave node %d transmited %d bytes: ", SLAVE_ID,  TRANSFER_SIZE); 
@@ -106,6 +137,11 @@ int main() {
 
 #if defined(MASTER)
     init_master();
+
+    //  async read in IRQ  mode
+    t.start(callback(&queue, &EventQueue::dispatch_forever));
+    my_nrf24l01p.getIRQ().fall( IRQ_fall_handler );
+
 #else 
     init_slave( SLAVE_ID );
 #endif    
@@ -114,21 +150,23 @@ int main() {
  
     while (1) {
 #if defined(MASTER) 
-        for(uint8_t pipe = 0; pipe<PIPE_NUMBER; pipe ++ ){ 
+        //  sync read in  pull mode
+
+        // for(uint8_t pipe = 0; pipe<PIPE_NUMBER; pipe ++ ){ 
             
-            int read_bytes = readOnPipe( pipe );
-            if( read_bytes ) // some data is received
-            {
-                // lets blink by the LED depends on which node data is received 
-                if( pipe == NRF24L01P_PIPE_P0 )
-                    myled1 = !myled1;
-                else if( pipe == NRF24L01P_PIPE_P1 )
-                    myled2 = !myled2;
-                else if ( pipe == NRF24L01P_PIPE_P2 )
-                    myled3 = !myled3;
-            }
-        }
-        ThisThread::sleep_for(BLINKING_RATE_MS/5);        
+        //     int read_bytes = readOnPipe( pipe );
+        //     if( read_bytes ) // some data is received
+        //     {
+        //         // lets blink by the LED depends on which node data is received 
+        //         if( pipe == NRF24L01P_PIPE_P0 )
+        //             myled1 = !myled1;
+        //         else if( pipe == NRF24L01P_PIPE_P1 )
+        //             myled2 = !myled2;
+        //         else if ( pipe == NRF24L01P_PIPE_P2 )
+        //             myled3 = !myled3;
+        //     }
+        // }
+        ThisThread::sleep_for(BLINKING_RATE_MS);        
 #else   // SLAVE     
         TransmitData();
         ThisThread::sleep_for(BLINKING_RATE_MS);
